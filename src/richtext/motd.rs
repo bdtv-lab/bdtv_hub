@@ -16,7 +16,7 @@ pub async fn motd(state: Arc<app::State>) -> Vec<Component> {
         Component::from("\n"),
     ];
 
-    motd.extend(list(state).await);
+    motd.extend(list(&state).await);
 
     motd
 }

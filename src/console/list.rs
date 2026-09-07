@@ -1,29 +1,28 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use azalea_chat::FormattedText;
 use serde::Deserialize;
-use smaragdine::brigadier::{
-    builder::literal_argument_builder::literal, command_dispatcher::CommandDispatcher,
-    context::CommandContext,
-};
+use smaragdine::{brigadier::prelude::*, commands};
 use tracing::info;
 
-use crate::{app, console::Src, richtext};
+use crate::{console::Src, richtext};
 
-pub(super) fn register(dispatcher: &mut CommandDispatcher<Src>) {
+pub(super) fn register(d: &mut CommandDispatcher<Src>) {
     // 注册 list
-    dispatcher.register(
-        literal("list")
-            .executes_async(|ctx: &CommandContext<Src>| list(Arc::clone(ctx.source.state()))),
-    );
+    commands!(d, {
+        literal("list") => { run async: list; };
+    });
 }
 
-async fn list(state: Arc<app::State>) -> i32 {
-    let player_list = serde_json::json!(richtext::list(state).await);
+async fn list(ctx: Arc<CommandContext<Src>>) -> Result<i32> {
+    let state = ctx.source.state();
 
-    let list_string = FormattedText::deserialize(&player_list).unwrap().to_string();
+    let player_list = serde_json::to_value(richtext::list(state).await)?;
+
+    let list_string = FormattedText::deserialize(&player_list)?.to_string();
 
     info!("Player(s) online:\n{}", list_string);
 
-    0
+    Ok(1)
 }

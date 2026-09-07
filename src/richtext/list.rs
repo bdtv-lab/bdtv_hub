@@ -5,7 +5,7 @@ use kyori_component_json::{ClickEvent, Color, Component, HoverEvent, NamedColor,
 use crate::app;
 
 /// 根据 State 构建 玩家列表
-pub async fn list(state: Arc<app::State>) -> Vec<Component> {
+pub async fn list(state: &Arc<app::State>) -> Vec<Component> {
     let mut list = Vec::new();
 
     let online_players = state.online_players.lock().await;
