@@ -1,68 +1,54 @@
-mod fake;
-mod viahttp;
+mod viaws;
 
-use anyhow::Result;
 use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, warn};
 
-use crate::{app, envconf::Config};
-pub use {fake::DummyReq, viahttp::HttpReq};
+use crate::{app, envconf::Config, qq::viaws::WsReq};
 
-pub trait ReQuester {
-    async fn handle_event(&self, event: &app::Event) -> Result<()>;
-}
-
-/// 所有消息发送器实现的集合
-pub enum AnyReq {
-    Http(HttpReq),
-    Dummy(DummyReq),
-}
-
-impl ReQuester for AnyReq {
-    async fn handle_event(&self, event: &app::Event) -> Result<()> {
-        match self {
-            Self::Http(req) => req.handle_event(event).await,
-            Self::Dummy(req) => req.handle_event(event).await,
-        }
-    }
-}
-
-pub fn get_requester(config: Config) -> AnyReq {
-    if let Some(base_url) = config.qq_http_api_base_url
+pub async fn get_ws_client(config: Config) -> Option<WsReq> {
+    if let Some(host) = config.qq_ws_host
+        && let Some(port) = config.qq_ws_port
         && let Some(group_id) = config.qq_notice_group_id
     {
-        AnyReq::Http(HttpReq::new(
-            base_url.clone(),
-            config.qq_http_api_token.clone(),
-            group_id as i64,
-        ))
+        WsReq::new(host, port, config.qq_ws_token, group_id)
+            .await
+            .ok()
     } else {
-        warn!("未配置 QQ HTTP API");
-        AnyReq::Dummy(DummyReq)
+        None
     }
 }
 
-pub async fn qq_requester(
-    mut rx: Receiver<app::Event>,
-    requester: impl ReQuester,
+pub async fn qq_connector(
+    ws_client: WsReq,
+    mut event_rx: Receiver<app::Event>,
     token: CancellationToken,
 ) {
+    let mut ws_rx = ws_client.conn.subscribe().await;
+
     loop {
         tokio::select! {
             _ = token.cancelled() => {
                 break;
             }
 
-            event = rx.recv() => {
+            // 服务器事件
+            event = event_rx.recv() => {
                 // 通道已关闭，不会再有事件
                 let Some(event) = event else {
                     break;
                 };
 
-                if let Err(e) = requester.handle_event(&event).await {
-                    error!("处理事件失败: {e:#}");
-                }
+                ws_client.handle_server_event(event).await;
+            }
+
+            // qq 事件
+            event = ws_rx.recv() => {
+                // 通道已关闭，不会再有事件
+                let Ok(event) = event else {
+                    break;
+                };
+
+                ws_client.handle_qq_event(event);
             }
         }
     }

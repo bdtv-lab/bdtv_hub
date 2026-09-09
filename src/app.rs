@@ -11,7 +11,7 @@ use tracing::{error, info};
 use crate::{
     console::console,
     envconf::Config,
-    qq::{get_requester, qq_requester},
+    qq::{get_ws_client, qq_connector},
     server::http_server,
     signal::shutdown_signal,
     warden::warden,
@@ -61,11 +61,14 @@ impl App {
         // 启动控制台
         tasks.spawn(console(Arc::clone(&state), token.clone()));
         // 启动 qq 消息发送
-        tasks.spawn(qq_requester(
+        if let Some(req) = get_ws_client(config.clone()).await {
+            tasks.spawn(qq_connector(
+            req,
             rx,
-            get_requester(config.clone()),
             token.clone(),
         ));
+        }
+        
         // 启动 http 服务器
         tasks.spawn(http_server(
             config.clone(),
