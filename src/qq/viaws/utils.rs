@@ -33,7 +33,7 @@ impl WsReq {
         let login_info = self.get_login_info().await?;
 
         let card = if count == 0 {
-            format!("{}", login_info.nickname)
+            login_info.nickname.to_string()
         } else {
             format!("{} 人在线", count)
         };

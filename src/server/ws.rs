@@ -33,11 +33,10 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
     while let Some(Ok(msg)) = socket.recv().await {
         match msg {
             Message::Text(utf8_bytes) => {
-                if let Ok(action) = serde_json::from_str::<Action>(&utf8_bytes) {
-                    if let Err(e) = handle_action(action, Arc::clone(&state)).await {
+                if let Ok(action) = serde_json::from_str::<Action>(&utf8_bytes)
+                    && let Err(e) = handle_action(action, Arc::clone(&state)).await {
                         error!("{}", e)
                     }
-                }
             }
 
             Message::Close(_) => break,

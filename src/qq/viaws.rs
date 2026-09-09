@@ -28,8 +28,8 @@ impl WsReq {
     ) -> Result<Self> {
         // 构造 ws 并连接
         let conn = WsConnect::new(WsConfig {
-            host: host,
-            port: port,
+            host,
+            port,
             access_token: token,
             ..Default::default()
         })
@@ -62,21 +62,18 @@ impl WsReq {
     /// 处理来自 QQ 的事件
     pub fn handle_qq_event(&self, event: onebot_v11::Event) {
         match event {
-            onebot_v11::Event::Meta(meta) => match meta {
-                Meta::Lifecycle(lifecycle) => {
+            onebot_v11::Event::Meta(meta) => {
+                if let Meta::Lifecycle(lifecycle) = meta {
                     // 对于生命周期事件，目前只在与 ws 服务器建立连接时打印日志
-                    match (
+                    if let ("lifecycle", "connect") = (
                         lifecycle.meta_event_type.as_str(),
                         lifecycle.sub_type.as_str(),
                     ) {
-                        ("lifecycle", "connect") => {
-                            info!("qq connected to user: {}", lifecycle.self_id)
-                        }
-                        _ => {}
+                        info!("qq connected to user: {}", lifecycle.self_id)
                     }
                 }
-                _ => {}
-            },
+            }
+
             onebot_v11::Event::Message(message) => match message {
                 Message::GroupMessage(group_message) => {
                     // 用作调试以及接口保留，处理特定 qq 群收到的消息

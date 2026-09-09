@@ -10,7 +10,6 @@ pub(super) async fn get_servers(
     let server_map = state.online_servers.lock().await;
     let servers = server_map
         .keys()
-        .into_iter()
         .map(|server| (server.slug.clone(), server.clone()))
         .collect();
     Json(servers)
