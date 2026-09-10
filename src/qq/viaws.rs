@@ -1,13 +1,13 @@
+mod handler;
 mod utils;
 mod wrapper;
-
 use std::sync::Arc;
 
 use onebot_v11::{
     connect::ws::{WsConfig, WsConnect},
     event::{message::Message, meta::Meta},
 };
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use anyhow::Result;
 
@@ -78,10 +78,7 @@ impl WsReq {
                 Message::GroupMessage(group_message) => {
                     // 用作调试以及接口保留，处理特定 qq 群收到的消息
                     if group_message.group_id == self.group_id {
-                        debug!(
-                            "message from {}: {}",
-                            self.group_id, group_message.raw_message
-                        )
+                        self.handle_special_group_msg(group_message);
                     }
                 }
                 _ => {}

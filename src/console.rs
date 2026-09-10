@@ -10,7 +10,7 @@ use tracing::error;
 
 use crate::app;
 
-type Src = Source<Arc<app::State>>;
+pub type Src = Source<Arc<app::State>>;
 
 pub async fn console(state: Arc<app::State>, token: CancellationToken) {
     let console = AsyncConsole::builder(Handle::current())
