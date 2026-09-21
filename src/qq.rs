@@ -20,7 +20,7 @@ pub async fn get_ws_client(config: Config) -> Option<WsReq> {
 
 pub async fn qq_connector(
     ws_client: WsReq,
-    mut event_rx: Receiver<app::Event>,
+    mut event_rx: Receiver<app::QQEvent>,
     token: CancellationToken,
 ) {
     let mut ws_rx = ws_client.conn.subscribe().await;

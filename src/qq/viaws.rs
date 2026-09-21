@@ -39,19 +39,19 @@ impl WsReq {
     }
 
     /// 处理来自服务器的事件
-    pub async fn handle_server_event(&self, event: app::Event) {
+    pub async fn handle_server_event(&self, event: app::QQEvent) {
         match event {
-            app::Event::PlayerJoined(player) => {
+            app::QQEvent::PlayerJoined(player) => {
                 if let Err(e) = self.send_player_join(player).await {
                     error!("Send Player joined failed: {e:?}")
                 }
             }
-            app::Event::PlayerLeft(player) => {
+            app::QQEvent::PlayerLeft(player) => {
                 if let Err(e) = self.send_player_left(player).await {
                     error!("Send Player left failed: {e:?}")
                 }
             }
-            app::Event::PlayerCountChanged(count) => {
+            app::QQEvent::PlayerCountChanged(count) => {
                 if let Err(e) = self.send_player_count_change(count).await {
                     error!("Send Player count changed failed: {e:?}")
                 }

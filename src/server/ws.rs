@@ -11,7 +11,7 @@ use axum::{
     response::Response,
 };
 use serde::Deserialize;
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::{app, server::ws::heartbeat::HeartBeat};
 
@@ -29,18 +29,40 @@ pub(super) async fn ws_connect(
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
+use tokio::sync::broadcast::error::RecvError;
+
 async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
-    while let Some(Ok(msg)) = socket.recv().await {
-        match msg {
-            Message::Text(utf8_bytes) => {
-                if let Ok(action) = serde_json::from_str::<Action>(&utf8_bytes)
-                    && let Err(e) = handle_action(action, Arc::clone(&state)).await {
-                        error!("{}", e)
+    let mut server_event_rx = state.get_server_event_rx();
+
+    loop {
+        tokio::select! {
+            // ws 接收端
+            // 接受来自 ws 客户端的事件
+            msg = socket.recv() => {
+                let Some(Ok(msg)) = msg else { break };
+                match msg {
+                    Message::Text(text) => {
+                        if let Ok(action) = serde_json::from_str::<Action>(&text)
+                            && let Err(e) = handle_action(action, Arc::clone(&state)).await
+                        {
+                            error!("{}", e);
+                        }
                     }
+                    Message::Close(_) => break,
+                    _ => {}
+                }
             }
 
-            Message::Close(_) => break,
-            _ => continue,
+            // ws 发送端
+            // 主动发送 ws 到客户端
+            event = server_event_rx.recv() => {
+                match event {
+                    Ok(event) => {
+                    }
+                    Err(RecvError::Lagged(n)) => warn!("ws client lagged, dropped {n} events"),
+                    Err(RecvError::Closed) => break,
+                }
+            }
         }
     }
 }
