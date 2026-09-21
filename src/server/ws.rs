@@ -1,3 +1,4 @@
+mod chat;
 mod heartbeat;
 
 use std::sync::Arc;
@@ -11,9 +12,12 @@ use axum::{
     response::Response,
 };
 use serde::Deserialize;
-use tracing::{error, warn};
+use tracing::{error, info, trace, warn};
 
-use crate::{app, server::ws::heartbeat::HeartBeat};
+use crate::{
+    app,
+    server::ws::{chat::PlayerChat, heartbeat::HeartBeat},
+};
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -21,6 +25,7 @@ use crate::{app, server::ws::heartbeat::HeartBeat};
 /// 来自客户端的事件
 pub enum EventFromClient {
     Heartbeat(HeartBeat),
+    PlayerChat(PlayerChat),
 }
 
 pub(super) async fn ws_connect(
@@ -59,6 +64,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
             event = event_to_client_rx.recv() => {
                 match event {
                     Ok(event) => {
+                        match event {
+
+                        }
                     }
                     Err(RecvError::Lagged(n)) => warn!("ws client lagged, dropped {n} events"),
                     Err(RecvError::Closed) => break,
@@ -71,7 +79,21 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
 /// 处理
 async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>) -> Result<()> {
     match event {
-        EventFromClient::Heartbeat(heart_beat) => heartbeat::beat(state, heart_beat).await,
+        EventFromClient::Heartbeat(heart_beat) => {
+            trace!(
+                "Heartbeat received for server {}, with {} players",
+                heart_beat.server.slug,
+                heart_beat.players.len()
+            );
+            heartbeat::beat(state, heart_beat).await
+        }
+        EventFromClient::PlayerChat(chat) => {
+            info!(
+                "{} in {} said: {}",
+                chat.player.nickname, chat.server.slug, chat.content
+            );
+            chat::received_player_chat(state, chat).await?
+        }
     }
 
     Ok(())

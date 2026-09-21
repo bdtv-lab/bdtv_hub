@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use serde::Deserialize;
-use tracing::trace;
 
 use crate::{
     app,
@@ -17,12 +16,6 @@ pub struct HeartBeat {
 pub(super) async fn beat(state: Arc<app::State>, payload: HeartBeat) {
     let players = payload.players;
     let server = payload.server;
-
-    trace!(
-        "Heartbeat received for server {}, with {} players",
-        server.slug,
-        players.len()
-    );
 
     state.mark_server_as_online(&server).await;
 

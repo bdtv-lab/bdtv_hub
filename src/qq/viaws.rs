@@ -56,6 +56,14 @@ impl WsReq {
                     error!("Send Player count changed failed: {e:?}")
                 }
             }
+            EventToQQ::PlayerSentChat(player, content) => {
+                if let Err(e) = self
+                    .send_group_msg(self.group_id, format!("{}: {}", player.nickname, content))
+                    .await
+                {
+                    error!("Send Player chat failed: {e:?}")
+                }
+            }
         }
     }
 
