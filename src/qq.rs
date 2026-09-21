@@ -3,7 +3,7 @@ mod viaws;
 use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
 
-use crate::{app, envconf::Config, qq::viaws::WsReq};
+use crate::{app::EventToQQ, envconf::Config, qq::viaws::WsReq};
 
 pub async fn get_ws_client(config: Config) -> Option<WsReq> {
     if let Some(host) = config.qq_ws_host
@@ -20,10 +20,10 @@ pub async fn get_ws_client(config: Config) -> Option<WsReq> {
 
 pub async fn qq_connector(
     ws_client: WsReq,
-    mut event_rx: Receiver<app::QQEvent>,
+    mut event_to_qq_rx: Receiver<EventToQQ>,
     token: CancellationToken,
 ) {
-    let mut ws_rx = ws_client.conn.subscribe().await;
+    let mut event_from_qq_rx = ws_client.conn.subscribe().await;
 
     loop {
         tokio::select! {
@@ -31,24 +31,24 @@ pub async fn qq_connector(
                 break;
             }
 
-            // 服务器事件
-            event = event_rx.recv() => {
+            // 服务器发往 qq 的事件
+            event = event_to_qq_rx.recv() => {
                 // 通道已关闭，不会再有事件
                 let Some(event) = event else {
                     break;
                 };
 
-                ws_client.handle_server_event(event).await;
+                ws_client.handle_event_to_qq(event).await;
             }
 
-            // qq 事件
-            event = ws_rx.recv() => {
+            // 来自 qq 的事件
+            event = event_from_qq_rx.recv() => {
                 // 通道已关闭，不会再有事件
                 let Ok(event) = event else {
                     break;
                 };
 
-                ws_client.handle_qq_event(event);
+                ws_client.handle_event_from_qq(event);
             }
         }
     }

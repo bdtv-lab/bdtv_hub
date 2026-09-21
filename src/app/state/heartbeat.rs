@@ -9,7 +9,7 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::{
-    app::{QQEvent, State},
+    app::{EventToQQ, State},
     types::{Player, Server},
 };
 
@@ -35,7 +35,7 @@ impl State {
         }
 
         debug!("Unique player count changed to {count}");
-        let _ = self.qq_event_tx.send(QQEvent::PlayerCountChanged(count)).await;
+        let _ = self.event_to_qq_tx.send(EventToQQ::PlayerCountChanged(count)).await;
     }
 
     /// 标记玩家为在线状态
@@ -68,8 +68,8 @@ impl State {
         if is_unique_new {
             info!("Player {} joined server {}", player.nickname, server.slug);
             let _ = self
-                .qq_event_tx
-                .send(QQEvent::PlayerJoined(player.clone()))
+                .event_to_qq_tx
+                .send(EventToQQ::PlayerJoined(player.clone()))
                 .await;
         }
         // 否则检查是否是已有玩家加入服务器
@@ -128,7 +128,7 @@ impl State {
                 "Player {} left server {} as last",
                 player.nickname, server.slug
             );
-            let _ = self.qq_event_tx.send(QQEvent::PlayerLeft(player)).await;
+            let _ = self.event_to_qq_tx.send(EventToQQ::PlayerLeft(player)).await;
         }
     }
 

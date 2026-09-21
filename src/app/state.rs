@@ -10,7 +10,7 @@ use tokio::{
 use uuid::Uuid;
 
 use crate::{
-    app::event::{QQEvent, ServerEvent},
+    app::event::{EventToClient, EventToQQ},
     types::{Player, Server},
 };
 
@@ -23,20 +23,20 @@ pub struct State {
     pub online_servers: Mutex<OnlineServers>,
     pub printer: Printer,
 
-    pub qq_event_tx: mpsc::Sender<QQEvent>,
-    pub server_event_tx: broadcast::Sender<ServerEvent>,
+    pub event_to_qq_tx: mpsc::Sender<EventToQQ>,
+    pub event_to_client_tx: broadcast::Sender<EventToClient>,
     /// 上次上报的去重在线人数
     last_reported_count: AtomicUsize,
 }
 
 impl State {
-    pub fn new(qq_tx: mpsc::Sender<QQEvent>) -> Self {
+    pub fn new(event_to_qq_tx: mpsc::Sender<EventToQQ>) -> Self {
         Self {
             online_players: Mutex::new(HashMap::new()),
             online_servers: Mutex::new(HashMap::new()),
             printer: Printer::new(),
-            qq_event_tx: qq_tx,
-            server_event_tx: broadcast::Sender::new(100),
+            event_to_qq_tx,
+            event_to_client_tx: broadcast::Sender::new(100),
             last_reported_count: AtomicUsize::new(0),
         }
     }

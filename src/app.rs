@@ -16,14 +16,14 @@ use crate::{
     signal::shutdown_signal,
     warden::warden,
 };
-pub use event::QQEvent;
+pub use event::EventToQQ;
 pub use state::State;
 
 /// 应用程序的主结构体
 pub struct App {
     state: Arc<State>,
     token: CancellationToken,
-    rx: mpsc::Receiver<QQEvent>,
+    rx: mpsc::Receiver<EventToQQ>,
     config: Config,
 }
 

@@ -18,7 +18,8 @@ use crate::{app, server::ws::heartbeat::HeartBeat};
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "action", content = "data")]
-pub enum Action {
+/// 来自客户端的事件
+pub enum EventFromClient {
     Heartbeat(HeartBeat),
 }
 
@@ -32,7 +33,7 @@ pub(super) async fn ws_connect(
 use tokio::sync::broadcast::error::RecvError;
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
-    let mut server_event_rx = state.get_server_event_rx();
+    let mut event_to_client_rx = state.get_event_to_client_rx();
 
     loop {
         tokio::select! {
@@ -42,8 +43,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
                 let Some(Ok(msg)) = msg else { break };
                 match msg {
                     Message::Text(text) => {
-                        if let Ok(action) = serde_json::from_str::<Action>(&text)
-                            && let Err(e) = handle_action(action, Arc::clone(&state)).await
+                        if let Ok(event) = serde_json::from_str::<EventFromClient>(&text)
+                            && let Err(e) = handle_event_from_client(event, Arc::clone(&state)).await
                         {
                             error!("{}", e);
                         }
@@ -55,7 +56,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
 
             // ws 发送端
             // 主动发送 ws 到客户端
-            event = server_event_rx.recv() => {
+            event = event_to_client_rx.recv() => {
                 match event {
                     Ok(event) => {
                     }
@@ -67,9 +68,10 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
     }
 }
 
-async fn handle_action(action: Action, state: Arc<app::State>) -> Result<()> {
-    match action {
-        Action::Heartbeat(heart_beat) => heartbeat::beat(state, heart_beat).await,
+/// 处理
+async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>) -> Result<()> {
+    match event {
+        EventFromClient::Heartbeat(heart_beat) => heartbeat::beat(state, heart_beat).await,
     }
 
     Ok(())

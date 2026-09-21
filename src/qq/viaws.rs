@@ -11,7 +11,7 @@ use tracing::{error, info};
 
 use anyhow::Result;
 
-use crate::app;
+use crate::app::EventToQQ;
 
 /// 包装了 ws 连接的请求器
 pub struct WsReq {
@@ -38,20 +38,20 @@ impl WsReq {
         Ok(Self { conn, group_id })
     }
 
-    /// 处理来自服务器的事件
-    pub async fn handle_server_event(&self, event: app::QQEvent) {
+    /// 处理发往 qq 的事件
+    pub async fn handle_event_to_qq(&self, event: EventToQQ) {
         match event {
-            app::QQEvent::PlayerJoined(player) => {
+            EventToQQ::PlayerJoined(player) => {
                 if let Err(e) = self.send_player_join(player).await {
                     error!("Send Player joined failed: {e:?}")
                 }
             }
-            app::QQEvent::PlayerLeft(player) => {
+            EventToQQ::PlayerLeft(player) => {
                 if let Err(e) = self.send_player_left(player).await {
                     error!("Send Player left failed: {e:?}")
                 }
             }
-            app::QQEvent::PlayerCountChanged(count) => {
+            EventToQQ::PlayerCountChanged(count) => {
                 if let Err(e) = self.send_player_count_change(count).await {
                     error!("Send Player count changed failed: {e:?}")
                 }
@@ -60,7 +60,7 @@ impl WsReq {
     }
 
     /// 处理来自 QQ 的事件
-    pub fn handle_qq_event(&self, event: onebot_v11::Event) {
+    pub fn handle_event_from_qq(&self, event: onebot_v11::Event) {
         match event {
             onebot_v11::Event::Meta(meta) => {
                 if let Meta::Lifecycle(lifecycle) = meta {
