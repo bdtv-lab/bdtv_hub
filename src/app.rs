@@ -61,14 +61,12 @@ impl App {
         // 启动控制台
         tasks.spawn(console(Arc::clone(&state), token.clone()));
         // 启动 qq 消息发送
-        if let Some(req) = get_ws_client(config.clone()).await {
-            tasks.spawn(qq_connector(
-            req,
+        tasks.spawn(qq_connector(
+            get_ws_client(config.clone()).await,
             rx,
             token.clone(),
         ));
-        }
-        
+
         // 启动 http 服务器
         tasks.spawn(http_server(
             config.clone(),

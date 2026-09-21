@@ -64,9 +64,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
             event = event_to_client_rx.recv() => {
                 match event {
                     Ok(event) => {
-                        match event {
-
-                        }
+                        todo!()
                     }
                     Err(RecvError::Lagged(n)) => warn!("ws client lagged, dropped {n} events"),
                     Err(RecvError::Closed) => break,
