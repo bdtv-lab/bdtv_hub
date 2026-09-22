@@ -1,4 +1,5 @@
 mod list;
+mod say;
 
 use std::sync::Arc;
 
@@ -26,6 +27,7 @@ pub async fn console(state: Arc<app::State>, token: CancellationToken) {
             }),
         )
         .commands(list::register)
+        .commands(say::register)
         .build(state);
 
     let source = console.source();

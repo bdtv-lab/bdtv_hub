@@ -31,6 +31,8 @@ pub enum EventToClient {
     GroupMemberSentMsg(GroupMemberSentMsg),
     /// MC 服务器发送的消息
     ClientSentMsg(ClientSentMsg),
+    /// 终端消息
+    ConsoleSentMsg(String),
 }
 
 #[derive(Debug, Clone)]
