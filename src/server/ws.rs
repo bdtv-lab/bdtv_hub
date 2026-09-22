@@ -16,7 +16,7 @@ use tokio::sync::broadcast;
 use tracing::{debug, error, info, trace, warn};
 
 use crate::{
-    app::{self, EventToClient},
+    app::{self},
     server::ws::{chat::PlayerChat, heartbeat::HeartBeat},
 };
 
@@ -43,6 +43,8 @@ pub(super) async fn ws_connect(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slug: String) {
+    debug!("websocket upgraded with client: {}", server_slug);
+
     let mut event_to_client_rx = state.get_event_to_client_rx();
 
     loop {
@@ -69,14 +71,23 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slu
             event_wrapper = event_to_client_rx.recv() => {
                 match event_wrapper {
                     Ok(event_wrapper) => {
+                        // 检查 slug 过滤器
+                        // 如果没有过滤器或者结果为 false
+                        // 不对这个 MC 服务器发送此事件
                         if let Some(filter) = event_wrapper.slug_filter &&
                         !filter(&server_slug) {
                             debug!("ignored event to client({})", server_slug);
                             continue;
                         }
 
+                        // 尝试序列化并发送事件
                         let event = event_wrapper.event;
-                        if let Err(e) = handle_event_to_client(event, &mut socket).await {
+                        if let Err(e) = async || -> Result<()> {
+                            let serded_event = serde_json::to_string(&event)?;
+                            socket.send(Message::Text(serded_event.into())).await?;
+
+                            Ok(())
+                        }().await  {
                             error!("can not send to client({}): {}", server_slug, e)
                         }
                     }
@@ -107,12 +118,6 @@ async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>
             chat::received_player_chat(state, chat).await?
         }
     }
-
-    Ok(())
-}
-
-async fn handle_event_to_client(event: EventToClient, socket: &mut WebSocket) -> Result<()> {
-    match event {}
 
     Ok(())
 }

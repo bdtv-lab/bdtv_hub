@@ -11,16 +11,18 @@ use tracing::{error, info};
 
 use anyhow::Result;
 
-use crate::app::EventToQQ;
+use crate::app::{EventToQQ, State};
 
 /// 包装了 ws 连接的请求器
 pub struct WsReq {
+    state: Arc<State>,
     pub conn: Arc<WsConnect>,
     group_id: i64,
 }
 
 impl WsReq {
     pub async fn new(
+        state: Arc<State>,
         host: String,
         port: u16,
         token: Option<String>,
@@ -35,7 +37,11 @@ impl WsReq {
         })
         .await?;
 
-        Ok(Self { conn, group_id })
+        Ok(Self {
+            state,
+            conn,
+            group_id,
+        })
     }
 
     /// 处理发往 qq 的事件

@@ -1,4 +1,4 @@
-mod event;
+pub mod event;
 mod state;
 
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use crate::{
     signal::shutdown_signal,
     warden::warden,
 };
-pub use event::{EventToClient, EventToQQ, EventToClientWrapper};
+pub use event::{EventToClient, EventToClientWrapper, EventToQQ};
 pub use state::State;
 
 /// 应用程序的主结构体
@@ -62,7 +62,7 @@ impl App {
         tasks.spawn(console(Arc::clone(&state), token.clone()));
         // 启动 qq 消息发送
         tasks.spawn(qq_connector(
-            get_ws_client(config.clone()).await,
+            get_ws_client(Arc::clone(&state), config.clone()).await,
             rx,
             token.clone(),
         ));

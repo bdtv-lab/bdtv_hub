@@ -1,17 +1,23 @@
 mod viaws;
 
+use std::sync::Arc;
+
 use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 
-use crate::{app::EventToQQ, envconf::Config, qq::viaws::WsReq};
+use crate::{
+    app::{EventToQQ, State},
+    envconf::Config,
+    qq::viaws::WsReq,
+};
 
-pub async fn get_ws_client(config: Config) -> Option<WsReq> {
+pub async fn get_ws_client(state: Arc<State>, config: Config) -> Option<WsReq> {
     if let Some(host) = config.qq_ws_host
         && let Some(port) = config.qq_ws_port
         && let Some(group_id) = config.qq_notice_group_id
     {
-        let ws_client = WsReq::new(host, port, config.qq_ws_token, group_id).await;
+        let ws_client = WsReq::new(state, host, port, config.qq_ws_token, group_id).await;
 
         if let Err(e) = &ws_client {
             error!("can not connect to qq: {}", e)
