@@ -16,7 +16,7 @@ use crate::{
     signal::shutdown_signal,
     warden::warden,
 };
-pub use event::EventToQQ;
+pub use event::{EventToClient, EventToQQ, EventToClientWrapper};
 pub use state::State;
 
 /// 应用程序的主结构体

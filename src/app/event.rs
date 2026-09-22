@@ -15,8 +15,21 @@ pub enum EventToQQ {
 #[derive(Debug, Clone)]
 pub enum EventToClient {}
 
+type SlugFilter = fn(&str) -> bool;
+
+#[derive(Debug, Clone)]
+pub struct EventToClientWrapper {
+    pub event: EventToClient,
+    pub slug_filter: Option<SlugFilter>,
+}
+
 impl State {
-    pub fn get_event_to_client_rx(&self) -> broadcast::Receiver<EventToClient> {
+    pub fn get_event_to_client_rx(&self) -> broadcast::Receiver<EventToClientWrapper> {
         self.event_to_client_tx.subscribe()
+    }
+
+    pub fn send_event_to_client(&self, event: EventToClient, slug_filter: Option<SlugFilter>) {
+        self.event_to_client_tx
+            .send(EventToClientWrapper { event, slug_filter });
     }
 }

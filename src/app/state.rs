@@ -10,7 +10,7 @@ use tokio::{
 use uuid::Uuid;
 
 use crate::{
-    app::event::{EventToClient, EventToQQ},
+    app::event::{EventToClientWrapper, EventToQQ},
     types::{Player, Server},
 };
 
@@ -24,7 +24,7 @@ pub struct State {
     pub printer: Printer,
 
     pub event_to_qq_tx: mpsc::Sender<EventToQQ>,
-    pub event_to_client_tx: broadcast::Sender<EventToClient>,
+    pub event_to_client_tx: broadcast::Sender<EventToClientWrapper>,
     /// 上次上报的去重在线人数
     last_reported_count: AtomicUsize,
 }

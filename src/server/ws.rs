@@ -6,16 +6,17 @@ use std::sync::Arc;
 use anyhow::Result;
 use axum::{
     extract::{
-        State,
+        Query, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
     response::Response,
 };
 use serde::Deserialize;
-use tracing::{error, info, trace, warn};
+use tokio::sync::broadcast;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::{
-    app,
+    app::{self, EventToClient},
     server::ws::{chat::PlayerChat, heartbeat::HeartBeat},
 };
 
@@ -28,16 +29,20 @@ pub enum EventFromClient {
     PlayerChat(PlayerChat),
 }
 
-pub(super) async fn ws_connect(
-    ws: WebSocketUpgrade,
-    State(state): State<Arc<app::State>>,
-) -> Response {
-    ws.on_upgrade(move |socket| handle_socket(socket, state))
+#[derive(Debug, Deserialize)]
+pub struct WsParams {
+    slug: String,
 }
 
-use tokio::sync::broadcast::error::RecvError;
+pub(super) async fn ws_connect(
+    ws: WebSocketUpgrade,
+    Query(params): Query<WsParams>,
+    State(state): State<Arc<app::State>>,
+) -> Response {
+    ws.on_upgrade(move |socket| handle_socket(socket, state, params.slug))
+}
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
+async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slug: String) {
     let mut event_to_client_rx = state.get_event_to_client_rx();
 
     loop {
@@ -51,7 +56,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
                         if let Ok(event) = serde_json::from_str::<EventFromClient>(&text)
                             && let Err(e) = handle_event_from_client(event, Arc::clone(&state)).await
                         {
-                            error!("{}", e);
+                            error!("error when handling event from client({}): {}", server_slug, e);
                         }
                     }
                     Message::Close(_) => break,
@@ -61,13 +66,22 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>) {
 
             // ws 发送端
             // 主动发送 ws 到客户端
-            event = event_to_client_rx.recv() => {
-                match event {
-                    Ok(event) => {
-                        todo!()
+            event_wrapper = event_to_client_rx.recv() => {
+                match event_wrapper {
+                    Ok(event_wrapper) => {
+                        if let Some(filter) = event_wrapper.slug_filter &&
+                        !filter(&server_slug) {
+                            debug!("ignored event to client({})", server_slug);
+                            continue;
+                        }
+
+                        let event = event_wrapper.event;
+                        if let Err(e) = handle_event_to_client(event, &mut socket).await {
+                            error!("can not send to client({}): {}", server_slug, e)
+                        }
                     }
-                    Err(RecvError::Lagged(n)) => warn!("ws client lagged, dropped {n} events"),
-                    Err(RecvError::Closed) => break,
+                    Err(broadcast::error::RecvError::Lagged(n)) => warn!("ws client lagged, dropped {n} events"),
+                    Err(broadcast::error::RecvError::Closed) => break,
                 }
             }
         }
@@ -93,6 +107,12 @@ async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>
             chat::received_player_chat(state, chat).await?
         }
     }
+
+    Ok(())
+}
+
+async fn handle_event_to_client(event: EventToClient, socket: &mut WebSocket) -> Result<()> {
+    match event {}
 
     Ok(())
 }
