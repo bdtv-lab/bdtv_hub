@@ -11,7 +11,10 @@ use tracing::{error, info};
 
 use anyhow::Result;
 
-use crate::app::{EventToQQ, State};
+use crate::{
+    app::{EventToQQ, State},
+    config::QqConfig,
+};
 
 /// 包装了 ws 连接的请求器
 pub struct WsReq {
@@ -21,18 +24,12 @@ pub struct WsReq {
 }
 
 impl WsReq {
-    pub async fn new(
-        state: Arc<State>,
-        host: String,
-        port: u16,
-        token: Option<String>,
-        group_id: i64,
-    ) -> Result<Self> {
+    pub async fn new(state: Arc<State>, qq: QqConfig) -> Result<Self> {
         // 构造 ws 并连接
         let conn = WsConnect::new(WsConfig {
-            host,
-            port,
-            access_token: token,
+            host: qq.host,
+            port: qq.port,
+            access_token: qq.token,
             ..Default::default()
         })
         .await?;
@@ -40,7 +37,7 @@ impl WsReq {
         Ok(Self {
             state,
             conn,
-            group_id,
+            group_id: qq.group_id,
         })
     }
 
@@ -49,17 +46,17 @@ impl WsReq {
         match event {
             EventToQQ::PlayerJoined(player) => {
                 if let Err(e) = self.send_player_join(player).await {
-                    error!("Send Player joined failed: {e:?}")
+                    error!("send player joined failed: {e:?}")
                 }
             }
             EventToQQ::PlayerLeft(player) => {
                 if let Err(e) = self.send_player_left(player).await {
-                    error!("Send Player left failed: {e:?}")
+                    error!("send player left failed: {e:?}")
                 }
             }
             EventToQQ::PlayerCountChanged(count) => {
                 if let Err(e) = self.send_player_count_change(count).await {
-                    error!("Send Player count changed failed: {e:?}")
+                    error!("send player count changed failed: {e:?}")
                 }
             }
             EventToQQ::PlayerSentChat(player, content) => {
@@ -67,7 +64,7 @@ impl WsReq {
                     .send_group_msg(self.group_id, format!("{}: {}", player.nickname, content))
                     .await
                 {
-                    error!("Send Player chat failed: {e:?}")
+                    error!("send player chat failed: {e:?}")
                 }
             }
         }

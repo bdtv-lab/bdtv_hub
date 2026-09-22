@@ -1,0 +1,11 @@
+listen: 127.0.0.1:7497
+
+qq:
+  host: 127.0.0.1
+  port: 3001
+  token: null
+  group_id: 123456
+
+check:
+  interval: 1
+  timeout: 30

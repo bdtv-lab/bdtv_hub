@@ -22,7 +22,7 @@ async fn list(ctx: Arc<CommandContext<Src>>) -> Result<i32> {
 
     let list_string = FormattedText::deserialize(&player_list)?.to_string();
 
-    info!("Player(s) online:\n{}", list_string);
+    info!("player(s) online:\n{}", list_string);
 
     Ok(1)
 }

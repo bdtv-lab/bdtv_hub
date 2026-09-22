@@ -34,7 +34,7 @@ impl State {
             return;
         }
 
-        debug!("Unique player count changed to {count}");
+        debug!("unique player count changed to {count}");
         let _ = self.event_to_qq_tx.send(EventToQQ::PlayerCountChanged(count)).await;
     }
 
@@ -66,7 +66,7 @@ impl State {
 
         // 如果是所有服务器中的新玩家则发送事件
         if is_unique_new {
-            info!("Player {} joined server {}", player.nickname, server.slug);
+            info!("player {} joined server {}", player.nickname, server.slug);
             let _ = self
                 .event_to_qq_tx
                 .send(EventToQQ::PlayerJoined(player.clone()))
@@ -75,7 +75,7 @@ impl State {
         // 否则检查是否是已有玩家加入服务器
         else if is_new {
             info!(
-                "Player {} joined another server {}",
+                "player {} joined another server {}",
                 player.nickname, server.slug
             );
         }
@@ -113,7 +113,7 @@ impl State {
                     .any(|players| players.contains_key(&uuid));
 
                 if still_online {
-                    info!("Player {} left server {}", player.nickname, server.slug);
+                    info!("player {} left server {}", player.nickname, server.slug);
                 } else {
                     left_players.push((server, player));
                 }
@@ -125,7 +125,7 @@ impl State {
         // 发送玩家离开的事件
         for (server, player) in left_players {
             info!(
-                "Player {} left server {} as last",
+                "player {} left server {} as last",
                 player.nickname, server.slug
             );
             let _ = self.event_to_qq_tx.send(EventToQQ::PlayerLeft(player)).await;
@@ -139,7 +139,7 @@ impl State {
             .is_none();
 
         if is_new {
-            info!("Server {} is online", server.slug);
+            info!("server {} is online", server.slug);
         }
     }
 
@@ -157,7 +157,7 @@ impl State {
 
         for server in timeout_servers {
             online_servers.remove(&server);
-            info!("Server {} is offline", server.slug);
+            info!("server {} is offline", server.slug);
         }
     }
 }

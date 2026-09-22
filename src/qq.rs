@@ -4,40 +4,30 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{
     app::{EventToQQ, State},
-    envconf::Config,
+    config::QqConfig,
     qq::viaws::WsReq,
 };
 
-pub async fn get_ws_client(state: Arc<State>, config: Config) -> Option<WsReq> {
-    if let Some(host) = config.qq_ws_host
-        && let Some(port) = config.qq_ws_port
-        && let Some(group_id) = config.qq_notice_group_id
-    {
-        let ws_client = WsReq::new(state, host, port, config.qq_ws_token, group_id).await;
-
-        if let Err(e) = &ws_client {
-            error!("can not connect to qq: {}", e)
-        }
-
-        ws_client.ok()
-    } else {
-        None
-    }
-}
-
 pub async fn qq_connector(
-    ws_client: Option<WsReq>,
+    qq: QqConfig,
+    state: Arc<State>,
     mut event_to_qq_rx: Receiver<EventToQQ>,
     token: CancellationToken,
 ) {
-    // 如果 QQ 不可用，把 rx 发送到销毁器
-    let Some(ws_client) = ws_client else {
-        exhaust_event(event_to_qq_rx, token).await;
-        return;
+    info!(
+        "waiting for QQ ws connection to {}:{}",
+        qq.host, qq.port
+    );
+    let ws_client = tokio::select! {
+        _ = token.cancelled() => return,
+        c = WsReq::new(state, qq) => match c {
+            Ok(c) => c,
+            Err(e) => { error!("can not connect to qq: {e}"); return; }
+        },
     };
 
     let mut event_from_qq_rx = ws_client.conn.subscribe().await;
@@ -69,12 +59,4 @@ pub async fn qq_connector(
             }
         }
     }
-}
-
-/// QQ 事件销毁器
-async fn exhaust_event(mut event_to_qq_rx: Receiver<EventToQQ>, token: CancellationToken) {
-    while let Some(_) = tokio::select! {
-        _ = token.cancelled() => None,
-        e = event_to_qq_rx.recv() => e,
-    } {}
 }

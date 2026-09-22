@@ -1,6 +1,6 @@
 pub mod app;
 mod console;
-pub mod envconf;
+pub mod config;
 pub mod logging;
 mod qq;
 mod richtext;
@@ -9,4 +9,4 @@ mod signal;
 mod types;
 mod warden;
 
-pub use {app::App, envconf::load_env};
+pub use {app::App, config::load_conf};

@@ -9,12 +9,8 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
 use crate::{
-    console::console,
-    envconf::Config,
-    qq::{get_ws_client, qq_connector},
-    server::http_server,
-    signal::shutdown_signal,
-    warden::warden,
+    config::AppConfig, console::console, qq::qq_connector, server::http_server,
+    signal::shutdown_signal, warden::warden,
 };
 pub use event::{EventToClient, EventToClientWrapper, EventToQQ};
 pub use state::State;
@@ -24,11 +20,11 @@ pub struct App {
     state: Arc<State>,
     token: CancellationToken,
     rx: mpsc::Receiver<EventToQQ>,
-    config: Config,
+    config: AppConfig,
 }
 
 impl App {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: AppConfig) -> Self {
         // 初始化 QQ 通信通道
         let (tx, rx) = mpsc::channel(100);
 
@@ -60,13 +56,18 @@ impl App {
 
         // 启动控制台
         tasks.spawn(console(Arc::clone(&state), token.clone()));
-        // 启动 qq 消息发送
-        tasks.spawn(qq_connector(
-            get_ws_client(Arc::clone(&state), config.clone()).await,
-            rx,
-            token.clone(),
-        ));
-
+        // 如果配置了 qq，启动 qq 消息发送
+        match config.qq.clone() {
+            Some(qq_config) => {
+                tasks.spawn(qq_connector(
+                    qq_config,
+                    Arc::clone(&state),
+                    rx,
+                    token.clone(),
+                ));
+            }
+            None => drop(rx),
+        }
         // 启动 http 服务器
         tasks.spawn(http_server(
             config.clone(),
@@ -81,11 +82,11 @@ impl App {
         // 阻塞等待任务事件
         while let Some(res) = tasks.join_next().await {
             if let Err(e) = res {
-                error!("发生 panic: {e}");
+                error!("can not join task: {e}");
             }
         }
 
-        info!("服务已退出");
+        info!("bye");
     }
 
     /// 安全获取一份 Printer 的引用
