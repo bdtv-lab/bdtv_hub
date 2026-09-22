@@ -4,12 +4,24 @@ mod ws;
 
 use std::sync::Arc;
 
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
-use crate::{app, config::AppConfig};
+use crate::{
+    app,
+    config::{AppConfig, node::NodeConfig},
+};
+
+#[derive(Clone, FromRef)]
+/// HTTP 服务器专用的状态
+///
+/// 包含对 MC 服务器的事件配置
+struct ServerState {
+    app: Arc<app::State>,
+    cfg: Arc<NodeConfig>,
+}
 
 /// 启动 HTTP 服务器
 ///
@@ -21,7 +33,10 @@ pub async fn http_server(config: AppConfig, state: Arc<app::State>, token: Cance
         .route("/motd", get(motd::get_motd))
         .route("/servers", get(goto::get_servers))
         .route("/ws", get(ws::ws_connect))
-        .with_state(state);
+        .with_state(ServerState {
+            app: state,
+            cfg: Arc::new(config.node),
+        });
 
     // 绑定 TCP 监听器
     let listener = match TcpListener::bind(&config.listen).await {

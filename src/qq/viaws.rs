@@ -14,7 +14,7 @@ use anyhow::Result;
 
 use crate::{
     app::{EventToQQ, State},
-    config::QqConfig,
+    config::qq::QqConfig,
 };
 
 /// 包装了 ws 连接的请求器

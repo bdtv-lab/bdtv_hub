@@ -17,6 +17,7 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::{
     app::{self},
+    config::node::NodeConfig,
     server::ws::{chat::PlayerChat, heartbeat::HeartBeat},
 };
 
@@ -38,11 +39,17 @@ pub(super) async fn ws_connect(
     ws: WebSocketUpgrade,
     Query(params): Query<WsParams>,
     State(state): State<Arc<app::State>>,
+    State(cfg): State<Arc<NodeConfig>>,
 ) -> Response {
-    ws.on_upgrade(move |socket| handle_socket(socket, state, params.slug))
+    ws.on_upgrade(move |socket| handle_socket(socket, state, cfg, params.slug))
 }
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slug: String) {
+async fn handle_socket(
+    mut socket: WebSocket,
+    state: Arc<app::State>,
+    cfg: Arc<NodeConfig>,
+    server_slug: String,
+) {
     debug!("websocket upgraded with client: {}", server_slug);
 
     let mut event_to_client_rx = state.get_event_to_client_rx();
@@ -56,7 +63,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slu
                 match msg {
                     Message::Text(text) => {
                         if let Ok(event) = serde_json::from_str::<EventFromClient>(&text)
-                            && let Err(e) = handle_event_from_client(event, Arc::clone(&state)).await
+                            && let Err(e) = handle_event_from_client(event, Arc::clone(&state), Arc::clone(&cfg)).await
                         {
                             error!("error when handling event from client({}): {}", server_slug, e);
                         }
@@ -97,8 +104,13 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slu
 }
 
 /// 处理来自 MC 服务器的事件
-async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>) -> Result<()> {
+async fn handle_event_from_client(
+    event: EventFromClient,
+    state: Arc<app::State>,
+    cfg: Arc<NodeConfig>,
+) -> Result<()> {
     match event {
+        // 心跳事件
         EventFromClient::Heartbeat(heart_beat) => {
             trace!(
                 "Heartbeat received for server {}, with {} players",
@@ -107,12 +119,25 @@ async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>
             );
             heartbeat::beat(state, heart_beat).await
         }
+
+        // 玩家聊天事件
         EventFromClient::PlayerChat(chat) => {
             info!(
                 "{} in {} said: {}",
                 chat.player.nickname, chat.server.slug, chat.content
             );
-            chat::received_player_chat(state, chat).await?
+
+            // 检查是否匹配排除规则
+            if cfg
+                .chat
+                .ignored_regex
+                .iter()
+                .any(|regex| regex.is_match(&chat.content))
+            {
+                debug!("ignored chat \"{}\" by regex pattern(s)", chat.content)
+            } else {
+                chat::received_player_chat(state, chat).await?
+            }
         }
     }
 

@@ -1,11 +1,29 @@
+# 程序监听地址
 listen: 127.0.0.1:7497
 
+# 支持 Onebot 11 协议的 WebSocket 服务器连接配置
 qq:
+  # 主机
   host: 127.0.0.1
+  # 端口
   port: 3001
+  # 凭据（可选）
   token: null
+  # 启用的群组
   group_id: 123456
 
+# MC 服务器端配置
+node:
+  # 玩家聊天
+  chat:
+    # 忽略的聊天模式
+    ignored_regex:
+    # MCDR 命令头
+    - '^!!'
+
+# 玩家离线检查器
 check:
+  # 频率（秒）
   interval: 1
+  # 离线缓冲时间（秒）
   timeout: 30

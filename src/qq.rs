@@ -8,7 +8,7 @@ use tracing::{error, info, warn};
 
 use crate::{
     app::{EventToQQ, State},
-    config::QqConfig,
+    config::qq::QqConfig,
     qq::viaws::WsReq,
 };
 
