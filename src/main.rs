@@ -1,6 +1,5 @@
 use bdtv_hub::{App, load_conf, logging};
 use dotenvy::dotenv;
-use tracing::error;
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +10,7 @@ async fn main() {
     let config = match load_conf() {
         Ok(config) => config,
         Err(e) => {
-            error!("failed to load config: {e}");
+            println!("failed to load config: {e}");
             return;
         }
     };

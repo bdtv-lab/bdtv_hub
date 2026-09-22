@@ -1,6 +1,6 @@
-use std::fs;
+use std::{fs, path::Path};
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use serde::Deserialize;
 
 const CONFIG_FILE: &str = "config.yaml";
@@ -38,6 +38,10 @@ pub struct WardenConfig {
 }
 
 pub fn load_conf() -> Result<AppConfig> {
+    if !Path::new(CONFIG_FILE).is_file() {
+        bail!("missing {}", CONFIG_FILE,)
+    }
+
     let file = fs::File::open(CONFIG_FILE)?;
     let config = serde_norway::from_reader(file)?;
 

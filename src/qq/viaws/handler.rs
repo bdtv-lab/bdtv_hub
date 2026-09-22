@@ -11,19 +11,19 @@ fn get_sender_name(group_message: GroupMessage) -> String {
     let sender = group_message.sender;
     // 检查群名片是否可用
     if let Some(card) = sender.card
-        && card.len() != 0
+        && !card.is_empty()
     {
-        return card;
+        card
     }
     // 检查用户昵称是否可用
     else if let Some(nickname) = sender.nickname
-        && nickname.len() != 0
+        && !nickname.is_empty()
     {
-        return nickname;
+        nickname
     }
     // 实在不行采用 QQ 号
     else {
-        return group_message.user_id.to_string();
+        group_message.user_id.to_string()
     }
 }
 
