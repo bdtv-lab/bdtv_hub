@@ -7,7 +7,7 @@ use tracing::error;
 use crate::{
     app::{
         State,
-        event::event_to_client::{ClientSentMsg, GroupMemberSentMsg, PlayerLeft},
+        event::event_to_client::{ClientSentMsg, GroupMemberSentMsg, PlayerEvent},
     },
     types::Player,
 };
@@ -34,8 +34,10 @@ pub enum EventToClient {
     /// 终端消息
     ConsoleSentMsg(String),
 
-    // 玩家最终离开服务器
-    PlayerLeft(PlayerLeft),
+    /// 玩家加入任意服务器
+    PlayerJoin(PlayerEvent),
+    /// 玩家最终离开服务器
+    PlayerLeft(PlayerEvent),
 }
 
 #[derive(Debug, Clone)]

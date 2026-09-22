@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     app::{
         EventToClient, EventToQQ, State,
-        event::{Audience, event_to_client::PlayerLeft},
+        event::{Audience, event_to_client::PlayerEvent},
     },
     types::{Player, Server},
 };
@@ -79,6 +79,16 @@ impl State {
                 player.nickname, server.slug
             );
         }
+        // 无论如何，向其他服务器发送玩家加入事件
+        if is_new || is_unique_new {
+            self.send_event_to_client(
+                EventToClient::PlayerJoin(PlayerEvent {
+                    server: server.clone(),
+                    player: player.clone(),
+                }),
+                Audience::Except(server.slug.clone()),
+            );
+        }
     }
 
     /// 检查玩家是否超时
@@ -131,7 +141,7 @@ impl State {
             );
             // 发送到其他 MC 服务器
             self.send_event_to_client(
-                EventToClient::PlayerLeft(PlayerLeft {
+                EventToClient::PlayerLeft(PlayerEvent {
                     server: server.clone(),
                     player: player.clone(),
                 }),
