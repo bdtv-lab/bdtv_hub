@@ -7,7 +7,7 @@ use tracing::error;
 use crate::{
     app::{
         State,
-        event::event_to_client::{ClientSentMsg, GroupMemberSentMsg},
+        event::event_to_client::{ClientSentMsg, GroupMemberSentMsg, PlayerLeft},
     },
     types::Player,
 };
@@ -33,10 +33,15 @@ pub enum EventToClient {
     ClientSentMsg(ClientSentMsg),
     /// 终端消息
     ConsoleSentMsg(String),
+
+    // 玩家最终离开服务器
+    PlayerLeft(PlayerLeft),
 }
 
 #[derive(Debug, Clone)]
 /// ClientSentMsg 的接收者选择器
+///
+/// 通过服务器的 slug 选择
 pub enum Audience {
     /// 所有 MC 服务器
     All,

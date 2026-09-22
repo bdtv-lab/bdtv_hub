@@ -21,3 +21,11 @@ pub struct ClientSentMsg {
     /// 消息
     pub message: String,
 }
+
+#[derive(Serialize, Debug, Clone)]
+pub struct PlayerLeft {
+    /// 最后离开的服务器
+    pub server: Server,
+    /// 离开的玩家
+    pub player: Player,
+}

@@ -9,7 +9,10 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::{
-    app::{EventToQQ, State},
+    app::{
+        EventToClient, EventToQQ, State,
+        event::{Audience, event_to_client::PlayerLeft},
+    },
     types::{Player, Server},
 };
 
@@ -120,11 +123,21 @@ impl State {
         };
 
         // 发送玩家离开的事件
+        // server 是最后离开的 MC 服务器
         for (server, player) in left_players {
             info!(
                 "player {} left server {} as last",
                 player.nickname, server.slug
             );
+            // 发送到其他 MC 服务器
+            self.send_event_to_client(
+                EventToClient::PlayerLeft(PlayerLeft {
+                    server: server.clone(),
+                    player: player.clone(),
+                }),
+                Audience::Except(server.slug),
+            );
+            // 发送到 QQ 群
             self.try_send_event_to_qq(EventToQQ::PlayerLeft(player));
         }
     }
