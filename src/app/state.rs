@@ -7,6 +7,7 @@ use tokio::{
     sync::{Mutex, broadcast, mpsc},
     time::Instant,
 };
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
@@ -38,6 +39,12 @@ impl State {
             event_to_qq_tx,
             event_to_client_tx: broadcast::Sender::new(100),
             last_reported_count: AtomicUsize::new(0),
+        }
+    }
+
+    pub fn try_send_event_to_qq(&self, event: EventToQQ) {
+        if let Err(e) = self.event_to_qq_tx.try_send(event) {
+            warn!("can not send event to QQ: {}", e);
         }
     }
 }

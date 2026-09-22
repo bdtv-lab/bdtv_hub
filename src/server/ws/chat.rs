@@ -19,10 +19,7 @@ pub(super) async fn received_player_chat(
     state: Arc<app::State>,
     payload: PlayerChat,
 ) -> Result<()> {
-    state
-        .event_to_qq_tx
-        .send(EventToQQ::PlayerSentChat(payload.player, payload.content))
-        .await?;
+    state.try_send_event_to_qq(EventToQQ::PlayerSentChat(payload.player, payload.content));
 
     Ok(())
 }

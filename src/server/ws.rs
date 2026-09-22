@@ -91,7 +91,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slu
                             error!("can not send to client({}): {}", server_slug, e)
                         }
                     }
-                    Err(broadcast::error::RecvError::Lagged(n)) => warn!("ws client lagged, dropped {n} events"),
+                    Err(broadcast::error::RecvError::Lagged(n)) => warn!("MC ws client lagged, dropped {n} events"),
                     Err(broadcast::error::RecvError::Closed) => break,
                 }
             }

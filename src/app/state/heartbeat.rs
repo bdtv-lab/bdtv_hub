@@ -35,7 +35,7 @@ impl State {
         }
 
         debug!("unique player count changed to {count}");
-        let _ = self.event_to_qq_tx.send(EventToQQ::PlayerCountChanged(count)).await;
+        self.try_send_event_to_qq(EventToQQ::PlayerCountChanged(count));
     }
 
     /// 标记玩家为在线状态
@@ -67,10 +67,7 @@ impl State {
         // 如果是所有服务器中的新玩家则发送事件
         if is_unique_new {
             info!("player {} joined server {}", player.nickname, server.slug);
-            let _ = self
-                .event_to_qq_tx
-                .send(EventToQQ::PlayerJoined(player.clone()))
-                .await;
+            self.try_send_event_to_qq(EventToQQ::PlayerJoined(player.clone()));
         }
         // 否则检查是否是已有玩家加入服务器
         else if is_new {
@@ -128,7 +125,7 @@ impl State {
                 "player {} left server {} as last",
                 player.nickname, server.slug
             );
-            let _ = self.event_to_qq_tx.send(EventToQQ::PlayerLeft(player)).await;
+            self.try_send_event_to_qq(EventToQQ::PlayerLeft(player));
         }
     }
 

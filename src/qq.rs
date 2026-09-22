@@ -2,9 +2,9 @@ mod viaws;
 
 use std::sync::Arc;
 
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::{broadcast::error::RecvError, mpsc::Receiver};
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     app::{EventToQQ, State},
@@ -18,10 +18,7 @@ pub async fn qq_connector(
     mut event_to_qq_rx: Receiver<EventToQQ>,
     token: CancellationToken,
 ) {
-    info!(
-        "waiting for QQ ws connection to {}:{}",
-        qq.host, qq.port
-    );
+    info!("waiting for QQ ws connection to {}:{}", qq.host, qq.port);
     let ws_client = tokio::select! {
         _ = token.cancelled() => return,
         c = WsReq::new(state, qq) => match c {
@@ -50,12 +47,12 @@ pub async fn qq_connector(
 
             // 来自 qq 的事件
             event = event_from_qq_rx.recv() => {
-                // 通道已关闭，不会再有事件
-                let Ok(event) = event else {
-                    break;
-                };
-
-                ws_client.handle_event_from_qq(event);
+                match event {
+                    Ok(event) => ws_client.handle_event_from_qq(event),
+                    // 通道已关闭，不会再有事件
+                    Err(RecvError::Closed) => break,
+                    Err(RecvError::Lagged(n)) => warn!("QQ ws connection lagged, dropped {n} events"),
+                }
             }
         }
     }
