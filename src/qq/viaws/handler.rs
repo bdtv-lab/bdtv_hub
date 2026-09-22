@@ -2,7 +2,10 @@ use onebot_v11::event::message::GroupMessage;
 use tracing::debug;
 
 use crate::{
-    app::{EventToClient, event::event_to_client::GroupMemberSentMsg},
+    app::{
+        EventToClient,
+        event::{Audience, event_to_client::GroupMemberSentMsg},
+    },
     qq::viaws::WsReq,
 };
 
@@ -45,7 +48,7 @@ impl WsReq {
                 sender_nickname: get_sender_name(group_message.clone()),
                 message: group_message.raw_message,
             }),
-            None,
+            Audience::All,
         );
     }
 }

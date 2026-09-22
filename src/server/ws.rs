@@ -71,12 +71,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slu
             event_wrapper = event_to_client_rx.recv() => {
                 match event_wrapper {
                     Ok(event_wrapper) => {
-                        // 检查 slug 过滤器
-                        // 如果没有过滤器或者结果为 false
-                        // 不对这个 MC 服务器发送此事件
-                        if let Some(filter) = event_wrapper.slug_filter &&
-                        !filter(&server_slug) {
-                            debug!("ignored event to client({})", server_slug);
+                        // 检查是否属于事件接收者
+                        if !event_wrapper.audience.includes(&server_slug) {
+                            trace!("ignored event to client({})", server_slug);
                             continue;
                         }
 
@@ -99,7 +96,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<app::State>, server_slu
     }
 }
 
-/// 处理
+/// 处理来自 MC 服务器的事件
 async fn handle_event_from_client(event: EventFromClient, state: Arc<app::State>) -> Result<()> {
     match event {
         EventFromClient::Heartbeat(heart_beat) => {

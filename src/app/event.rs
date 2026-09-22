@@ -5,7 +5,10 @@ use tokio::sync::broadcast;
 use tracing::error;
 
 use crate::{
-    app::{State, event::event_to_client::GroupMemberSentMsg},
+    app::{
+        State,
+        event::event_to_client::{ClientSentMsg, GroupMemberSentMsg},
+    },
     types::Player,
 };
 
@@ -26,14 +29,35 @@ pub enum EventToQQ {
 pub enum EventToClient {
     /// QQ 群消息推送到 MC 事件
     GroupMemberSentMsg(GroupMemberSentMsg),
+    /// MC 服务器发送的消息
+    ClientSentMsg(ClientSentMsg),
 }
 
-type SlugFilter = fn(&str) -> bool;
+#[derive(Debug, Clone)]
+/// ClientSentMsg 的接收者选择器
+pub enum Audience {
+    /// 所有 MC 服务器
+    All,
+    /// 仅特定服务器
+    Only(String),
+    /// 排除特定服务器
+    Except(String),
+}
+
+impl Audience {
+    pub fn includes(&self, slug: &str) -> bool {
+        match self {
+            Audience::All => true,
+            Audience::Only(s) => s == slug,
+            Audience::Except(s) => s != slug,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct EventToClientWrapper {
     pub event: EventToClient,
-    pub slug_filter: Option<SlugFilter>,
+    pub audience: Audience,
 }
 
 impl State {
@@ -41,10 +65,10 @@ impl State {
         self.event_to_client_tx.subscribe()
     }
 
-    pub fn send_event_to_client(&self, event: EventToClient, slug_filter: Option<SlugFilter>) {
+    pub fn send_event_to_client(&self, event: EventToClient, audience: Audience) {
         if let Err(e) = self
             .event_to_client_tx
-            .send(EventToClientWrapper { event, slug_filter })
+            .send(EventToClientWrapper { event, audience })
         {
             error!("can not send event to client: {}", e);
         }
